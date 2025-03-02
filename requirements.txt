@@ -1,0 +1,7 @@
+# No external Python packages required beyond the standard library
+# However, FFmpeg must be installed on the system 
+
+# Core dependencies
+Flask==2.3.3
+Flask-CORS==4.0.0
+Werkzeug==2.3.7 
