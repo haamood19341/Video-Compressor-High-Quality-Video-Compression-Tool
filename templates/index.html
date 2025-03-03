@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Compressor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            background-color: #f8f9fa;
+        }
+        .main-container {
+            max-width: 960px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            padding: 2rem;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .upload-container {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            transition: all 0.3s;
+        }
+        .upload-container:hover, .upload-container.dragover {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+        .progress-container {
+            margin-top: 2rem;
+            display: none;
+        }
+        .job-list {
+            margin-top: 2rem;
+        }
+        .job-card {
+            margin-bottom: 1rem;
+            border-left: 5px solid #0d6efd;
+        }
+        .job-card.completed {
+            border-left-color: #198754;
+        }
+        .job-card.failed {
+            border-left-color: #dc3545;
+        }
+        .job-card.cancelled {
+            border-left-color: #6c757d;
+        }
+        .settings-container {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .hidden {
+            display: none;
+        }
+        .file-info {
+            text-align: left;
+            margin-top: 1rem;
+        }
+        .cancel-btn {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="header">
+            <h1>Video Compressor</h1>
+            <p class="lead">Compress your videos while maintaining high quality</p>
+        </div>
+
+        <div class="upload-container" id="upload-container">
+            <div class="upload-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                </svg>
+            </div>
+            <h3>Drag & Drop your video file here</h3>
+            <p>or</p>
+            <input type="file" id="file-input" class="hidden" accept=".mp4,.mov,.avi,.mkv,.wmv,.flv">
+            <button class="btn btn-primary" id="browse-button">Browse Files</button>
+            
+            <div class="file-info hidden" id="file-info">
+                <div class="alert alert-info">
+                    <h5 id="file-name"></h5>
+                    <p id="file-size"></p>
+                </div>
+            </div>
+            
+            <div class="settings-container hidden" id="settings-container">
+                <h4>Compression Settings</h4>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="target-size" class="form-label">Target Size (MB)</label>
+                        <input type="number" class="form-control" id="target-size" value="30" min="5" max="500">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="codec" class="form-label">Codec</label>
+                        <select class="form-select" id="codec">
+                            <option value="libx265" selected>H.265/HEVC (Best Compression)</option>
+                            <option value="libx264">H.264/AVC (Better Compatibility)</option>
+                            <option value="vp9">VP9 (Web Optimized)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="crf" class="form-label">Quality (CRF)</label>
+                        <input type="range" class="form-range" id="crf" min="18" max="35" value="28">
+                        <div class="d-flex justify-content-between">
+                            <small>Higher Quality</small>
+                            <small id="crf-value">28</small>
+                            <small>Smaller Size</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="preset" class="form-label">Encoding Speed</label>
+                        <select class="form-select" id="preset">
+                            <option value="ultrafast">Ultrafast (Lowest Compression)</option>
+                            <option value="superfast">Superfast</option>
+                            <option value="veryfast">Very Fast</option>
+                            <option value="faster">Faster</option>
+                            <option value="fast">Fast</option>
+                            <option value="medium" selected>Medium (Balanced)</option>
+                            <option value="slow">Slow</option>
+                            <option value="slower">Slower</option>
+                            <option value="veryslow">Very Slow (Best Compression)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="max-width" class="form-label">Max Width (Optional)</label>
+                        <select class="form-select" id="max-width">
+                            <option value="" selected>Original Size</option>
+                            <option value="3840">4K (3840px)</option>
+                            <option value="1920">Full HD (1920px)</option>
+                            <option value="1280">HD (1280px)</option>
+                            <option value="854">SD (854px)</option>
+                            <option value="640">Low (640px)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="audio-bitrate" class="form-label">Audio Bitrate</label>
+                        <select class="form-select" id="audio-bitrate">
+                            <option value="32k">32 kbps (Low)</option>
+                            <option value="64k">64 kbps</option>
+                            <option value="96k">96 kbps</option>
+                            <option value="128k" selected>128 kbps (Standard)</option>
+                            <option value="192k">192 kbps (High)</option>
+                            <option value="256k">256 kbps (Very High)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <button class="btn btn-success" id="compress-button">Start Compression</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="progress-container" id="progress-container">
+            <h4>Compression Progress</h4>
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" id="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+            </div>
+            <p class="text-center mt-2" id="progress-status">Uploading...</p>
+            
+            <div class="d-grid gap-2 cancel-btn">
+                <button class="btn btn-danger" id="cancel-button">Cancel Compression</button>
+            </div>
+            
+            <div class="alert alert-success hidden mt-3" id="success-alert">
+                <h5>Compression Complete!</h5>
+                <p id="compression-stats"></p>
+                <div class="d-grid gap-2">
+                    <a href="#" class="btn btn-primary" id="download-link">Download Compressed Video</a>
+                </div>
+            </div>
+            
+            <div class="alert alert-danger hidden mt-3" id="error-alert">
+                <h5>Compression Failed</h5>
+                <p id="error-message"></p>
+            </div>
+            
+            <div class="alert alert-secondary hidden mt-3" id="cancelled-alert">
+                <h5>Compression Cancelled</h5>
+                <p>The compression job was cancelled by the user.</p>
+            </div>
+        </div>
+        
+        <div class="job-list" id="job-list">
+            <h4>Recent Jobs</h4>
+            <div id="jobs-container">
+                <!-- Jobs will be added here dynamically -->
+                <div class="text-center text-muted">
+                    <p>No recent jobs</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const uploadContainer = document.getElementById('upload-container');
+            const fileInput = document.getElementById('file-input');
+            const browseButton = document.getElementById('browse-button');
+            const fileInfo = document.getElementById('file-info');
+            const fileName = document.getElementById('file-name');
+            const fileSize = document.getElementById('file-size');
+            const settingsContainer = document.getElementById('settings-container');
+            const compressButton = document.getElementById('compress-button');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressStatus = document.getElementById('progress-status');
+            const cancelButton = document.getElementById('cancel-button');
+            const successAlert = document.getElementById('success-alert');
+            const errorAlert = document.getElementById('error-alert');
+            const cancelledAlert = document.getElementById('cancelled-alert');
+            const compressionStats = document.getElementById('compression-stats');
+            const errorMessage = document.getElementById('error-message');
+            const downloadLink = document.getElementById('download-link');
+            const jobsContainer = document.getElementById('jobs-container');
+            const crfInput = document.getElementById('crf');
+            const crfValue = document.getElementById('crf-value');
+            
+            // Current job ID
+            let currentJobId = null;
+            
+            // Update CRF value display
+            crfInput.addEventListener('input', function() {
+                crfValue.textContent = this.value;
+            });
+            
+            // File selection via browse button
+            browseButton.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // File selection handler
+            fileInput.addEventListener('change', function() {
+                handleFileSelection(this.files[0]);
+            });
+            
+            // Drag and drop handlers
+            uploadContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+            
+            uploadContainer.addEventListener('dragleave', function() {
+                this.classList.remove('dragover');
+            });
+            
+            uploadContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length > 0) {
+                    handleFileSelection(e.dataTransfer.files[0]);
+                }
+            });
+            
+            // Handle file selection
+            function handleFileSelection(file) {
+                if (!file) return;
+                
+                // Check if file is a video
+                const allowedTypes = [
+                    'video/mp4', 'video/quicktime', 'video/x-msvideo', 
+                    'video/x-matroska', 'video/x-ms-wmv', 'video/x-flv'
+                ];
+                
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Please select a valid video file (MP4, MOV, AVI, MKV, WMV, FLV)');
+                    return;
+                }
+                
+                // Display file info
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                fileInfo.classList.remove('hidden');
+                settingsContainer.classList.remove('hidden');
+                
+                // Store the file for later use
+                window.selectedFile = file;
+            }
+            
+            // Format file size
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Start compression
+            compressButton.addEventListener('click', function() {
+                if (!window.selectedFile) {
+                    alert('Please select a video file first');
+                    return;
+                }
+                
+                // Show progress container
+                progressContainer.style.display = 'block';
+                uploadContainer.style.display = 'none';
+                
+                // Reset alerts
+                successAlert.classList.add('hidden');
+                errorAlert.classList.add('hidden');
+                cancelledAlert.classList.add('hidden');
+                
+                // Get compression settings
+                const formData = new FormData();
+                formData.append('file', window.selectedFile);
+                formData.append('target_size_mb', document.getElementById('target-size').value);
+                formData.append('codec', document.getElementById('codec').value);
+                formData.append('crf', document.getElementById('crf').value);
+                formData.append('preset', document.getElementById('preset').value);
+                formData.append('max_width', document.getElementById('max-width').value);
+                formData.append('audio_bitrate', document.getElementById('audio-bitrate').value);
+                
+                // Upload file and start compression
+                fetch('/api/compress', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Store the job ID
+                        currentJobId = data.job_id;
+                        
+                        // Start polling for job status
+                        pollJobStatus(currentJobId);
+                    } else {
+                        showError(data.message);
+                    }
+                })
+                .catch(error => {
+                    showError('Error: ' + error.message);
+                });
+            });
+            
+            // Cancel compression
+            cancelButton.addEventListener('click', function() {
+                if (!currentJobId) return;
+                
+                // Disable the cancel button while cancelling
+                cancelButton.disabled = true;
+                cancelButton.textContent = 'Cancelling...';
+                
+                // Send cancel request
+                fetch(`/api/cancel/${currentJobId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show cancelled alert
+                        cancelledAlert.classList.remove('hidden');
+                        progressStatus.textContent = 'Compression cancelled';
+                        progressBar.classList.remove('progress-bar-animated');
+                        progressBar.classList.add('bg-secondary');
+                        
+                        // Re-enable the cancel button
+                        cancelButton.disabled = false;
+                        cancelButton.textContent = 'Cancel Compression';
+                        
+                        // Refresh job list
+                        loadJobs();
+                    } else {
+                        showError(data.message);
+                        
+                        // Re-enable the cancel button
+                        cancelButton.disabled = false;
+                        cancelButton.textContent = 'Cancel Compression';
+                    }
+                })
+                .catch(error => {
+                    showError('Error: ' + error.message);
+                    
+                    // Re-enable the cancel button
+                    cancelButton.disabled = false;
+                    cancelButton.textContent = 'Cancel Compression';
+                });
+            });
+            
+            // Poll job status
+            function pollJobStatus(jobId) {
+                const interval = setInterval(function() {
+                    fetch(`/api/status/${jobId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                const job = data.job;
+                                updateProgress(job);
+                                
+                                if (job.status === 'completed') {
+                                    clearInterval(interval);
+                                    showSuccess(job);
+                                } else if (job.status === 'failed') {
+                                    clearInterval(interval);
+                                    showError(job.message || 'Compression failed');
+                                } else if (job.status === 'cancelled') {
+                                    clearInterval(interval);
+                                    showCancelled();
+                                }
+                            } else {
+                                clearInterval(interval);
+                                showError(data.message);
+                            }
+                        })
+                        .catch(error => {
+                            clearInterval(interval);
+                            showError('Error: ' + error.message);
+                        });
+                }, 1000);
+            }
+            
+            // Update progress
+            function updateProgress(job) {
+                const progress = job.progress || 0;
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressBar.textContent = `${progress}%`;
+                
+                if (job.status === 'queued') {
+                    progressStatus.textContent = 'Queued...';
+                } else if (job.status === 'processing') {
+                    progressStatus.textContent = 'Processing...';
+                }
+            }
+            
+            // Show success
+            function showSuccess(job) {
+                successAlert.classList.remove('hidden');
+                
+                // Format stats
+                let stats = '';
+                if (job.original_size && job.compressed_size) {
+                    stats += `Original size: ${job.original_size.toFixed(2)} MB<br>`;
+                    stats += `Compressed size: ${job.compressed_size.toFixed(2)} MB<br>`;
+                    stats += `Compression ratio: ${job.compression_ratio.toFixed(2)}x<br>`;
+                    stats += `Compression: ${job.compression_percent.toFixed(2)}%<br>`;
+                }
+                
+                compressionStats.innerHTML = stats;
+                
+                // Set download link
+                downloadLink.href = `/api/download/${job.id || currentJobId}`;
+                
+                // Update progress status
+                progressStatus.textContent = 'Compression completed successfully!';
+                progressBar.classList.remove('progress-bar-animated');
+                
+                // Hide cancel button
+                cancelButton.style.display = 'none';
+                
+                // Refresh job list
+                loadJobs();
+            }
+            
+            // Show error
+            function showError(message) {
+                errorAlert.classList.remove('hidden');
+                errorMessage.textContent = message;
+                progressStatus.textContent = 'Compression failed';
+                progressBar.classList.remove('progress-bar-animated');
+                progressBar.classList.add('bg-danger');
+                
+                // Hide cancel button
+                cancelButton.style.display = 'none';
+                
+                // Refresh job list
+                loadJobs();
+            }
+            
+            // Show cancelled
+            function showCancelled() {
+                cancelledAlert.classList.remove('hidden');
+                progressStatus.textContent = 'Compression cancelled';
+                progressBar.classList.remove('progress-bar-animated');
+                progressBar.classList.add('bg-secondary');
+                
+                // Hide cancel button
+                cancelButton.style.display = 'none';
+                
+                // Refresh job list
+                loadJobs();
+            }
+            
+            // Reset UI for new upload
+            document.getElementById('job-list').addEventListener('click', function(e) {
+                if (e.target.classList.contains('new-upload-btn')) {
+                    progressContainer.style.display = 'none';
+                    uploadContainer.style.display = 'block';
+                    progressBar.style.width = '0%';
+                    progressBar.setAttribute('aria-valuenow', 0);
+                    progressBar.textContent = '0%';
+                    progressBar.classList.add('progress-bar-animated');
+                    progressBar.classList.remove('bg-danger');
+                    progressBar.classList.remove('bg-secondary');
+                    fileInput.value = '';
+                    window.selectedFile = null;
+                    currentJobId = null;
+                    
+                    // Show cancel button
+                    cancelButton.style.display = 'block';
+                    cancelButton.disabled = false;
+                    cancelButton.textContent = 'Cancel Compression';
+                }
+            });
+            
+            // Load jobs
+            function loadJobs() {
+                fetch('/api/jobs')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const jobs = data.jobs;
+                            
+                            if (Object.keys(jobs).length === 0) {
+                                jobsContainer.innerHTML = `
+                                    <div class="text-center text-muted">
+                                        <p>No recent jobs</p>
+                                    </div>
+                                `;
+                                return;
+                            }
+                            
+                            let jobsHtml = '';
+                            
+                            // Sort jobs by updated_at (newest first)
+                            const sortedJobs = Object.entries(jobs)
+                                .sort(([, a], [, b]) => b.updated_at - a.updated_at)
+                                .map(([id, job]) => ({ id, ...job }));
+                            
+                            for (const job of sortedJobs) {
+                                let statusBadge = '';
+                                let cardClass = 'job-card';
+                                
+                                if (job.status === 'completed') {
+                                    statusBadge = '<span class="badge bg-success">Completed</span>';
+                                    cardClass += ' completed';
+                                } else if (job.status === 'failed') {
+                                    statusBadge = '<span class="badge bg-danger">Failed</span>';
+                                    cardClass += ' failed';
+                                } else if (job.status === 'cancelled') {
+                                    statusBadge = '<span class="badge bg-secondary">Cancelled</span>';
+                                    cardClass += ' cancelled';
+                                } else if (job.status === 'processing') {
+                                    statusBadge = '<span class="badge bg-primary">Processing</span>';
+                                } else {
+                                    statusBadge = '<span class="badge bg-secondary">Queued</span>';
+                                }
+                                
+                                let jobDetails = '';
+                                if (job.status === 'completed' && job.original_size && job.compressed_size) {
+                                    jobDetails = `
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                ${job.original_size.toFixed(2)} MB → ${job.compressed_size.toFixed(2)} MB 
+                                                (${job.compression_percent.toFixed(2)}% reduction)
+                                            </small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <a href="/api/download/${job.id}" class="btn btn-sm btn-primary">Download</a>
+                                        </div>
+                                    `;
+                                } else if (job.status === 'processing' || job.status === 'queued') {
+                                    jobDetails = `
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-danger cancel-job-btn" data-job-id="${job.id}">Cancel</button>
+                                        </div>
+                                    `;
+                                }
+                                
+                                jobsHtml += `
+                                    <div class="card ${cardClass} mb-3">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h5 class="card-title">${job.filename || 'Unknown file'}</h5>
+                                                ${statusBadge}
+                                            </div>
+                                            ${jobDetails}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            
+                            jobsHtml += `
+                                <div class="d-grid gap-2 mt-3">
+                                    <button class="btn btn-outline-primary new-upload-btn">Upload New Video</button>
+                                </div>
+                            `;
+                            
+                            jobsContainer.innerHTML = jobsHtml;
+                            
+                            // Add event listeners to cancel buttons
+                            document.querySelectorAll('.cancel-job-btn').forEach(button => {
+                                button.addEventListener('click', function() {
+                                    const jobId = this.getAttribute('data-job-id');
+                                    cancelJob(jobId);
+                                });
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading jobs:', error);
+                    });
+            }
+            
+            // Cancel a job from the job list
+            function cancelJob(jobId) {
+                fetch(`/api/cancel/${jobId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Refresh job list
+                        loadJobs();
+                    } else {
+                        alert(data.message || 'Failed to cancel job');
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            }
+            
+            // Load jobs on page load
+            loadJobs();
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
